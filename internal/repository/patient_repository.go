@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/yourusername/digital-health-assistant/internal/models"
+	"github.com/MarkAndrewKamau/Digital-Micro-Health-Assistant-Referral/internal/models"
 )
 
 type PatientRepository struct {
