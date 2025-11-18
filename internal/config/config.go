@@ -2,6 +2,8 @@ package config
 
 import (
 	"os"
+	"strconv"
+	"time"
 )
 
 type Config struct {
@@ -14,33 +16,13 @@ type Config struct {
 	// Redis
 	RedisURL string
 
-	// RabbitMQ
-	RabbitMQURL string
-
-	// MinIO/S3
-	MinIOEndpoint  string
-	MinIOAccessKey string
-	MinIOSecretKey string
-	MinIOBucket    string
-
-	// Africa's Talking
-	AfricasTalkingAPIKey  string
-	AfricasTalkingUsername string
-
-	// Safaricom Daraja (M-Pesa)
-	MpesaConsumerKey    string
-	MpesaConsumerSecret string
-	MpesaPasskey        string
-	MpesaShortcode      string
-
-	// OpenAI (optional)
-	OpenAIAPIKey string
-
-	// JWT
-	JWTSecret string
+	// Session
+	SessionDuration time.Duration
 }
 
 func Load() *Config {
+	sessionDurationHours, _ := strconv.Atoi(getEnv("SESSION_DURATION_HOURS", "720")) // 30 days default
+
 	return &Config{
 		Environment: getEnv("ENVIRONMENT", "development"),
 		Port:        getEnv("PORT", "8080"),
@@ -51,30 +33,8 @@ func Load() *Config {
 		// Redis
 		RedisURL: getEnv("REDIS_URL", "redis://localhost:6379/0"),
 
-		// RabbitMQ
-		RabbitMQURL: getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/"),
-
-		// MinIO
-		MinIOEndpoint:  getEnv("MINIO_ENDPOINT", "localhost:9000"),
-		MinIOAccessKey: getEnv("MINIO_ACCESS_KEY", "minioadmin"),
-		MinIOSecretKey: getEnv("MINIO_SECRET_KEY", "minioadmin"),
-		MinIOBucket:    getEnv("MINIO_BUCKET", "health-attachments"),
-
-		// Africa's Talking
-		AfricasTalkingAPIKey:  getEnv("AFRICASTALKING_API_KEY", ""),
-		AfricasTalkingUsername: getEnv("AFRICASTALKING_USERNAME", "sandbox"),
-
-		// M-Pesa
-		MpesaConsumerKey:    getEnv("MPESA_CONSUMER_KEY", ""),
-		MpesaConsumerSecret: getEnv("MPESA_CONSUMER_SECRET", ""),
-		MpesaPasskey:        getEnv("MPESA_PASSKEY", ""),
-		MpesaShortcode:      getEnv("MPESA_SHORTCODE", ""),
-
-		// OpenAI
-		OpenAIAPIKey: getEnv("OPENAI_API_KEY", ""),
-
-		// JWT
-		JWTSecret: getEnv("JWT_SECRET", "mark1234"),
+		// Session
+		SessionDuration: time.Duration(sessionDurationHours) * time.Hour,
 	}
 }
 
