@@ -1,7 +1,5 @@
--- Enable required extensions
+-- Enable required extensions (skip vector for now)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "postgis";
-CREATE EXTENSION IF NOT EXISTS "vector";
 
 -- Create enum types
 CREATE TYPE user_role AS ENUM ('patient', 'chv', 'clinician', 'admin');
@@ -27,7 +25,7 @@ CREATE TABLE patients (
 CREATE INDEX idx_patients_phone ON patients(phone);
 CREATE INDEX idx_patients_consent_flags ON patients USING GIN(consent_flags);
 
--- Facilities table
+-- Facilities table (without PostGIS - using simple lat/lng columns)
 CREATE TABLE facilities (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
@@ -35,7 +33,8 @@ CREATE TABLE facilities (
     level INTEGER,
     county VARCHAR(100),
     sub_county VARCHAR(100),
-    location GEOGRAPHY(POINT, 4326),
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),
     address TEXT,
     phone VARCHAR(20),
     email VARCHAR(255),
@@ -50,10 +49,10 @@ CREATE TABLE facilities (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_facilities_location ON facilities USING GIST(location);
 CREATE INDEX idx_facilities_type ON facilities(type);
 CREATE INDEX idx_facilities_county ON facilities(county);
 CREATE INDEX idx_facilities_services ON facilities USING GIN(services);
+CREATE INDEX idx_facilities_lat_lng ON facilities(latitude, longitude);
 
 -- Clinicians table
 CREATE TABLE clinicians (
@@ -151,21 +150,6 @@ CREATE INDEX idx_consent_patient ON consent_logs(patient_id);
 CREATE INDEX idx_consent_type ON consent_logs(consent_type);
 CREATE INDEX idx_consent_granted_at ON consent_logs(granted_at DESC);
 
--- Embeddings table (for RAG)
-CREATE TABLE embeddings (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    doc_ref VARCHAR(255) NOT NULL,
-    content TEXT NOT NULL,
-    vector vector(1536),
-    source VARCHAR(255),
-    metadata JSONB DEFAULT '{}',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_embeddings_vector ON embeddings USING ivfflat (vector vector_cosine_ops);
-CREATE INDEX idx_embeddings_doc_ref ON embeddings(doc_ref);
-CREATE INDEX idx_embeddings_source ON embeddings(source);
-
 -- Users table (for CHVs, clinicians, admins authentication)
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -200,20 +184,6 @@ CREATE TABLE sessions (
 CREATE INDEX idx_sessions_token ON sessions(session_token);
 CREATE INDEX idx_sessions_user ON sessions(user_id);
 CREATE INDEX idx_sessions_expires ON sessions(expires_at);
-
--- OTP codes table (for phone verification)
-CREATE TABLE otp_codes (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    phone VARCHAR(20) NOT NULL,
-    code VARCHAR(6) NOT NULL,
-    purpose VARCHAR(50) DEFAULT 'login',
-    verified BOOLEAN DEFAULT false,
-    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_otp_phone ON otp_codes(phone);
-CREATE INDEX idx_otp_expires ON otp_codes(expires_at);
 
 -- Updated at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
