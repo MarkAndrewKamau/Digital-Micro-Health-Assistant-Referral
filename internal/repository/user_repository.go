@@ -5,6 +5,8 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"log"
+	//"net"
 	"time"
 
 	"github.com/google/uuid"
@@ -44,6 +46,7 @@ func (r *UserRepository) Create(ctx context.Context, phone string, role models.U
 	)
 
 	if err != nil {
+		log.Printf("Error creating user: %v", err)
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
@@ -76,6 +79,7 @@ func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Use
 		return nil, fmt.Errorf("user not found")
 	}
 	if err != nil {
+		log.Printf("Error getting user by ID: %v", err)
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
@@ -108,6 +112,7 @@ func (r *UserRepository) GetByPhone(ctx context.Context, phone string) (*models.
 		return nil, nil // Not found, not an error
 	}
 	if err != nil {
+		log.Printf("Error getting user by phone: %v", err)
 		return nil, fmt.Errorf("failed to get user by phone: %w", err)
 	}
 
@@ -123,6 +128,7 @@ func (r *UserRepository) UpdateLastLogin(ctx context.Context, userID uuid.UUID) 
 
 	_, err := r.db.Exec(ctx, query, userID)
 	if err != nil {
+		log.Printf("Error updating last login: %v", err)
 		return fmt.Errorf("failed to update last login: %w", err)
 	}
 
@@ -141,6 +147,7 @@ func (r *UserRepository) GenerateSessionToken() (string, error) {
 func (r *UserRepository) CreateSession(ctx context.Context, userID uuid.UUID, userAgent, ipAddress string) (*models.Session, error) {
 	sessionToken, err := r.GenerateSessionToken()
 	if err != nil {
+		log.Printf("Error generating session token: %v", err)
 		return nil, err
 	}
 
@@ -149,10 +156,11 @@ func (r *UserRepository) CreateSession(ctx context.Context, userID uuid.UUID, us
 	query := `
 		INSERT INTO sessions (user_id, session_token, expires_at, user_agent, ip_address)
 		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, user_id, session_token, expires_at, user_agent, ip_address, created_at
+		RETURNING id, user_id, session_token, expires_at, user_agent, ip_address::text, created_at
 	`
 
 	var session models.Session
+
 	err = r.db.QueryRow(ctx, query, userID, sessionToken, expiresAt, userAgent, ipAddress).Scan(
 		&session.ID,
 		&session.UserID,
@@ -164,6 +172,7 @@ func (r *UserRepository) CreateSession(ctx context.Context, userID uuid.UUID, us
 	)
 
 	if err != nil {
+		log.Printf("Error creating session in database: %v", err)
 		return nil, fmt.Errorf("failed to create session: %w", err)
 	}
 
@@ -172,7 +181,7 @@ func (r *UserRepository) CreateSession(ctx context.Context, userID uuid.UUID, us
 
 func (r *UserRepository) GetSessionByToken(ctx context.Context, sessionToken string) (*models.Session, error) {
 	query := `
-		SELECT id, user_id, session_token, expires_at, user_agent, ip_address, created_at
+		SELECT id, user_id, session_token, expires_at, user_agent, ip_address::text, created_at
 		FROM sessions
 		WHERE session_token = $1
 	`
@@ -192,6 +201,7 @@ func (r *UserRepository) GetSessionByToken(ctx context.Context, sessionToken str
 		return nil, fmt.Errorf("session not found")
 	}
 	if err != nil {
+		log.Printf("Error getting session by token: %v", err)
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
 
@@ -203,6 +213,7 @@ func (r *UserRepository) DeleteSession(ctx context.Context, sessionToken string)
 
 	_, err := r.db.Exec(ctx, query, sessionToken)
 	if err != nil {
+		log.Printf("Error deleting session: %v", err)
 		return fmt.Errorf("failed to delete session: %w", err)
 	}
 
@@ -214,6 +225,7 @@ func (r *UserRepository) DeleteExpiredSessions(ctx context.Context) error {
 
 	_, err := r.db.Exec(ctx, query)
 	if err != nil {
+		log.Printf("Error deleting expired sessions: %v", err)
 		return fmt.Errorf("failed to delete expired sessions: %w", err)
 	}
 
