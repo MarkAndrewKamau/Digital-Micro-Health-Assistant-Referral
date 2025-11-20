@@ -80,6 +80,7 @@ func main() {
 		// Auth routes (public)
 		auth := v1.Group("/auth")
 		{
+			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
 			auth.POST("/logout", authHandler.Logout)
 			auth.GET("/me", middleware.AuthMiddleware(authService), authHandler.Me)
