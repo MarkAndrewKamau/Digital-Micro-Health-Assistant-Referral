@@ -22,20 +22,41 @@ func NewAuthService(redis *database.Redis, userRepo *repository.UserRepository) 
 	}
 }
 
-// Login with phone number directly (no OTP)
+// Register creates a new user
+func (s *AuthService) Register(ctx context.Context, phone string, role models.UserRole) (*models.User, error) {
+	// Check if user already exists
+	existingUser, err := s.userRepo.GetByPhone(ctx, phone)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check user: %w", err)
+	}
+
+	if existingUser != nil {
+		return nil, fmt.Errorf("user already exists with this phone number")
+	}
+
+	// Create new user
+	user, err := s.userRepo.Create(ctx, phone, role)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	return user, nil
+}
+
+// Login authenticates user and returns user object (does NOT create user)
 func (s *AuthService) Login(ctx context.Context, phone string) (*models.User, error) {
-	// Get or create user
+	// Get user - must exist
 	user, err := s.userRepo.GetByPhone(ctx, phone)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
 	if user == nil {
-		// Create new user with patient role by default
-		user, err = s.userRepo.Create(ctx, phone, models.UserRolePatient)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create user: %w", err)
-		}
+		return nil, fmt.Errorf("user not found - please register first")
+	}
+
+	if !user.IsActive {
+		return nil, fmt.Errorf("user account is inactive")
 	}
 
 	// Update last login
