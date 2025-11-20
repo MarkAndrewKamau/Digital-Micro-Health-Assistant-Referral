@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/MarkAndrewKamau/Digital-Micro-Health-Assistant-Referral/internal/models"
 	"github.com/MarkAndrewKamau/Digital-Micro-Health-Assistant-Referral/internal/services"
 	"github.com/MarkAndrewKamau/Digital-Micro-Health-Assistant-Referral/pkg/response"
 )
@@ -16,13 +17,38 @@ func NewAuthHandler(authService *services.AuthService) *AuthHandler {
 	return &AuthHandler{authService: authService}
 }
 
+type RegisterRequest struct {
+	Phone string `json:"phone" binding:"required"`
+	Role  string `json:"role" binding:"required,oneof=patient chv clinician admin"`
+}
+
 type LoginRequest struct {
 	Phone string `json:"phone" binding:"required"`
 }
 
-type LoginResponse struct {
+type AuthResponse struct {
 	SessionToken string      `json:"session_token"`
 	User         interface{} `json:"user"`
+}
+
+// Register handles POST /v1/auth/register
+func (h *AuthHandler) Register(c *gin.Context) {
+	var req RegisterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "INVALID_REQUEST", "Invalid request body")
+		return
+	}
+
+	// Convert string role to UserRole type
+	role := models.UserRole(req.Role)
+
+	user, err := h.authService.Register(c.Request.Context(), req.Phone, role)
+	if err != nil {
+		response.Error(c, http.StatusConflict, "REGISTRATION_FAILED", err.Error())
+		return
+	}
+
+	response.Success(c, http.StatusCreated, user)
 }
 
 // Login handles POST /v1/auth/login
@@ -33,10 +59,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// Login with phone number
+	// Login with phone number (user must exist)
 	user, err := h.authService.Login(c.Request.Context(), req.Phone)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "LOGIN_FAILED", "Failed to login")
+		response.Error(c, http.StatusUnauthorized, "LOGIN_FAILED", err.Error())
 		return
 	}
 
@@ -49,7 +75,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, http.StatusOK, LoginResponse{
+	response.Success(c, http.StatusOK, AuthResponse{
 		SessionToken: session.SessionToken,
 		User:         user,
 	})
