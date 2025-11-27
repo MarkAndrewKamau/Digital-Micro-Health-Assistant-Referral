@@ -40,6 +40,7 @@ func main() {
 	patientRepo := repository.NewPatientRepository(db.Pool)
 	facilityRepo := repository.NewFacilityRepository(db.Pool)
 	userRepo := repository.NewUserRepository(db.Pool)
+	triageRepo := repository.NewTriageRepository(db.Pool)
 
 	// Initialize services
 	authService := services.NewAuthService(redis, userRepo)
@@ -49,6 +50,7 @@ func main() {
 	authHandler := handlers.NewAuthHandler(authService)
 	patientHandler := handlers.NewPatientHandler(patientRepo)
 	facilityHandler := handlers.NewFacilityHandler(facilityRepo)
+	triageHandler := handlers.NewTriageHandler(triageRepo)
 
 	// Set Gin mode
 	if cfg.Environment == "production" {
@@ -104,6 +106,14 @@ func main() {
 				facilities.GET("", facilityHandler.ListFacilities)
 				facilities.GET("/nearby", facilityHandler.GetNearbyFacilities)
 				facilities.GET("/:id", facilityHandler.GetFacility)
+			}
+
+			// Triage routes
+		    triage := protected.Group("/triage")
+			{
+				triage.POST("", triageHandler.CreateTriage)
+				triage.GET("/:id", triageHandler.GetTriage)
+				triage.GET("/patient/:patient_id", triageHandler.GetPatientTriages)
 			}
 		}
 	}
