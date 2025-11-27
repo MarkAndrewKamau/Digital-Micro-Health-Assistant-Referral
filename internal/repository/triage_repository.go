@@ -12,6 +12,15 @@ import (
 	"github.com/MarkAndrewKamau/Digital-Micro-Health-Assistant-Referral/internal/models"
 )
 
+// TriageRepositoryInterface defines the interface for triage operations
+type TriageRepositoryInterface interface {
+	Create(ctx context.Context, req *models.CreateTriageRequest) (*models.TriageSession, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*models.TriageSession, error)
+	UpdateStatus(ctx context.Context, id uuid.UUID, status models.TriageStatus) error
+	UpdateTriageResult(ctx context.Context, id uuid.UUID, level models.TriageLevel, code string, confidence float64, action string, llmResponse map[string]interface{}) error
+	GetByPatientID(ctx context.Context, patientID uuid.UUID, limit int) ([]*models.TriageSession, error)
+}
+
 type TriageRepository struct {
 	db *pgxpool.Pool
 }
