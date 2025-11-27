@@ -11,10 +11,10 @@ import (
 )
 
 type TriageHandler struct {
-	triageRepo *repository.TriageRepository
+	triageRepo repository.TriageRepositoryInterface
 }
 
-func NewTriageHandler(triageRepo *repository.TriageRepository) *TriageHandler {
+func NewTriageHandler(triageRepo repository.TriageRepositoryInterface) *TriageHandler {
 	return &TriageHandler{triageRepo: triageRepo}
 }
 
